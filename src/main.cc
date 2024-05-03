@@ -14,7 +14,7 @@ int main() {
   try {
     BookstoreDatabase based(connection_data);
   
-    std::string test_1 = based.get_book_details("112391293");
+    std::string test_1 = based.get_book_details("978-1-40-885565-2");
     std::cout << test_1 << std::endl;
     
   } catch (const std::exception& e) {

@@ -26,7 +26,7 @@ std::string BookstoreDatabase::get_book_details(std::string isbn) {
         "AUTHOR: " + res[0]["author_name"].as<std::string>() + "\n"
         "PUBLISHER: " + res[0]["publisher_name"].as<std::string>() + "\n"
         "PUBLICATION DATE: " + res[0]["publication_date"].as<std::string>() + "\n"
-        "PRICE" + res[0]["price"].as<std::string>() + "\n";
+        "PRICE: " + res[0]["price"].as<std::string>() + "\n";
 
     return book_details;
 
