@@ -20,7 +20,7 @@ class BookstoreDatabase {
     }
   };
 
-  std::string get_book_details(std::string isbn);
+  std::string get_book_details(const std::string& isbn);
 };
 
 #endif // SIMPLESERVER_HEADER_BOOKSTOREDATABASE_H_
