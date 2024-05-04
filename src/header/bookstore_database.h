@@ -11,6 +11,8 @@ class BookstoreDatabase {
   pqxx::connection connection_;
   pqxx::work transaction_;
   std::string last_error;
+
+  int register_user(const std::string& registration_data);
   
  public:
   BookstoreDatabase(const std::string& connection_data)

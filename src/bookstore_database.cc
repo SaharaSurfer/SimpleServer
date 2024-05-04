@@ -1,6 +1,7 @@
 #include "header/bookstore_database.h"
 
 #include <string>
+#include <sstream>
 #include <vector>
 
 std::vector<std::string> BookstoreDatabase::get_summaries(int num_books,
@@ -60,4 +61,33 @@ std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
   }
 
   return "An error occured!";
+}
+
+int BookstoreDatabase::register_user(const std::string& registration_data) {
+  std::string query = "SELECT user_id FROM register_user(&1, &2, &3, &4, &5)";
+
+  std::string username;
+  std::string password;
+  std::string email;
+  std::string address;
+  std::string phone;
+
+  try {
+    std::istringstream iss(registration_data);
+    iss >> username >> password >> email >> address >> phone;
+
+    pqxx::result res = transaction_.exec_params(username, password, email,
+                                                address, phone);
+
+    if (res.size() != 1) {
+      throw std::runtime_error("Failed to register user!");
+    }
+
+    return res[0]["user_id"].as<int>();
+
+  } catch (const std::exception& e) {
+    last_error = e.what();
+  }
+
+  return -1;
 }
