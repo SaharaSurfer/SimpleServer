@@ -81,6 +81,27 @@ bool BookstoreDatabase::add_book_to_cart(int user_id, int quantity,
   return false;
 }
 
+bool BookstoreDatabase::change_cart_book_quantity(int user_id, int new_quantity,
+                                                  const std::string& isbn) {
+  std::string query = "SELECT is_success FROM update_cart_book_quantity($1, $2, $3)";
+  
+  try {
+    pqxx::result res = transaction_.exec_params(query, new_quantity, user_id, isbn);
+
+    if (res.empty() || !res[0]["is_success"].as<bool>()) {
+      throw std::runtime_error("Failed update_quantity in cart_book table!");
+    }
+
+    transaction_.commit();
+    return true;
+
+  } catch (const std::exception& e) {
+    last_error = e.what();
+  }
+
+  return false;
+}
+
 int BookstoreDatabase::register_user(const std::string& registration_data) {
   std::string query = "SELECT user_id FROM register_user($1, $2, $3, $4, $5)";
 
