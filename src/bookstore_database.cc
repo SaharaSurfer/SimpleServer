@@ -91,3 +91,28 @@ int BookstoreDatabase::register_user(const std::string& registration_data) {
 
   return -1;
 }
+
+bool BookstoreDatabase::log_in_user(const std::string& log_in_data) {
+  std::string query = "SELECT is_success FROM login_user($1, $2)";
+
+  std::string username;
+  std::string password;
+
+  try {
+    std::istringstream iss(log_in_data);
+    iss >> username >> password;
+
+    pqxx::result res = transaction_.exec_params(username, password);
+
+    if (res.size() != 1) {
+      throw std::runtime_error("Failed to log in user!");
+    }
+
+    return res[0]["is_success"].as<bool>();
+
+  } catch (const std::exception& e) {
+    last_error = e.what();
+  }
+
+  return false;
+}

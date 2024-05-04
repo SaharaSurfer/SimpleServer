@@ -11,8 +11,6 @@ class BookstoreDatabase {
   pqxx::connection connection_;
   pqxx::work transaction_;
   std::string last_error;
-
-  int register_user(const std::string& registration_data);
   
  public:
   BookstoreDatabase(const std::string& connection_data)
@@ -24,6 +22,9 @@ class BookstoreDatabase {
 
   std::vector<std::string> get_summaries(int num_books, int start_index);
   std::string get_book_details(const std::string& isbn);
+
+  int register_user(const std::string& registration_data);
+  bool log_in_user(const std::string& log_in_data);
 };
 
 #endif // SIMPLESERVER_HEADER_BOOKSTOREDATABASE_H_
