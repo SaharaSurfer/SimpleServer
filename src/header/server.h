@@ -14,12 +14,12 @@ class Server {
   ip::tcp::acceptor acceptor_;
   ip::tcp::socket socket_;
   boost::thread_group thread_pool;
-  BookstoreDatabase database_{std::getenv("DATABASE_URL")};
+  BookstoreDatabase database_;
 
  public:
-  Server(int port, int num_threads)
+  Server(int port, int num_threads, std::string db_connection_data)
       : acceptor_(io_context_, ip::tcp::endpoint(ip::tcp::v4(), port)),
-        socket_(io_context_) {
+        socket_(io_context_), database_(db_connection_data) {
     for (int i = 0; i < num_threads; ++i) {
       thread_pool.create_thread([this]() { io_context_.run(); });
     }
