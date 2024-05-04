@@ -13,13 +13,15 @@ int main() {
 
   try {
     BookstoreDatabase based(connection_data);
-  
+
+    std::string divider(80, '-');
+
     std::string test_1 = based.get_book_details("978-1-40-885565-2");
-    std::cout << test_1 << "\n";
+    std::cout << test_1 << divider << "\n";
 
     std::vector<std::string> test_2 = based.get_summaries(10, 1);
     for (const std::string& row : test_2) {
-      std::cout << row << std::endl;
+      std::cout << row << divider << "\n";
     }
     
   } catch (const std::exception& e) {
