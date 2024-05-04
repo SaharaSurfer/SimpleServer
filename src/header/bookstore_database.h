@@ -25,6 +25,7 @@ class BookstoreDatabase {
   bool add_book_to_cart(int user_id, int quantity, const std::string& isbn);
   bool change_cart_book_quantity(int user_id, int new_quantity,
                                  const std::string& isbn);
+  int create_order(int user_id);
 
   int register_user(const std::string& registration_data);
   bool log_in_user(const std::string& log_in_data);
