@@ -64,7 +64,7 @@ std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
 }
 
 int BookstoreDatabase::register_user(const std::string& registration_data) {
-  std::string query = "SELECT user_id FROM register_user(&1, &2, &3, &4, &5)";
+  std::string query = "SELECT user_id FROM register_user($1, $2, $3, $4, $5)";
 
   std::string username;
   std::string password;
