@@ -42,7 +42,7 @@ std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
     pqxx::result res = transaction_.exec_params(query, isbn);
 
     if (res.empty()) {
-      return "Book not found!";
+      throw std::runtime_error("Book not found!");
     }
 
     std::string book_details = "DESCRIPTION:\n"
@@ -63,6 +63,24 @@ std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
   return "An error occured!";
 }
 
+bool BookstoreDatabase::add_book_to_cart(int user_id, int quantity,
+                                         const std::string& isbn) {
+  std::string query = "INSERT INTO cart_book (customer_id, isbn, quantity) "
+                      "VALUES ($1, $2, $3)";
+  
+  try {
+    pqxx::result res = transaction_.exec_params(query, user_id, isbn, quantity);
+    transaction_.commit();
+
+    return true;
+    
+  } catch (const std::exception& e) {
+    last_error = e.what();
+  }
+
+  return false;
+}
+
 int BookstoreDatabase::register_user(const std::string& registration_data) {
   std::string query = "SELECT user_id FROM register_user($1, $2, $3, $4, $5)";
 
@@ -76,13 +94,14 @@ int BookstoreDatabase::register_user(const std::string& registration_data) {
     std::istringstream iss(registration_data);
     iss >> username >> password >> email >> address >> phone;
 
-    pqxx::result res = transaction_.exec_params(username, password, email,
-                                                address, phone);
+    pqxx::result res = transaction_.exec_params(query, username, password,
+                                                email, address, phone);
 
     if (res.size() != 1) {
       throw std::runtime_error("Failed to register user!");
     }
 
+    transaction_.commit();
     return res[0]["user_id"].as<int>();
 
   } catch (const std::exception& e) {
@@ -102,7 +121,7 @@ bool BookstoreDatabase::log_in_user(const std::string& log_in_data) {
     std::istringstream iss(log_in_data);
     iss >> username >> password;
 
-    pqxx::result res = transaction_.exec_params(username, password);
+    pqxx::result res = transaction_.exec_params(query, username, password);
 
     if (res.size() != 1) {
       throw std::runtime_error("Failed to log in user!");

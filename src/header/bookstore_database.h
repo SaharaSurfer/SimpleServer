@@ -22,6 +22,7 @@ class BookstoreDatabase {
 
   std::vector<std::string> get_summaries(int num_books, int start_index);
   std::string get_book_details(const std::string& isbn);
+  bool add_book_to_cart(int user_id, int quantity, const std::string& isbn);
 
   int register_user(const std::string& registration_data);
   bool log_in_user(const std::string& log_in_data);
