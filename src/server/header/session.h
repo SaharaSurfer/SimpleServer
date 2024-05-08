@@ -11,9 +11,13 @@ class Session {
   boost::asio::ip::tcp::socket socket_;
   boost::asio::streambuf input_buffer_;
   BookstoreDatabase& db_;
+  
+  int user_id_ = -1;
+  int current_page_ = 0;
 
   void send_welcome_message();
   void read_request();
+  void process_request();
 
  public:
   Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db)
