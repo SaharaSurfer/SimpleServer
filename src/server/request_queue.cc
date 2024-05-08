@@ -30,3 +30,13 @@ bool RequestQueue::pop(Request& request) {
   queue_.pop();
   return true;
 }
+
+void RequestQueue::stop() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    stop_ = true;
+  }
+
+  // This wakes up all threads that are waiting for requests in the pop() method
+  cond_var_.notify_all();
+}
