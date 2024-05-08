@@ -12,6 +12,7 @@ class Client {
   boost::asio::streambuf input_buffer_;
 
   void send_request(const std::string& request);
+  void read_reply();
 
  public:
   Client() : socket_(io_context_) {}
