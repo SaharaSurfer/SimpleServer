@@ -7,6 +7,21 @@
 
 #include "header/bookstore_database.h"
 
+void Session::start() {
+  send_welcome_message();
+
+  while (socket_.is_open()) {
+    read_request();
+    process_request();
+  }
+}
+
+void Session::stop() {
+  boost::system::error_code ec;
+  socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+  socket_.close();
+}
+
 void Session::send_welcome_message() {
   try {
     std::vector<std::string> welcome_summaries = db_.get_summaries(5, 1);

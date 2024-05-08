@@ -23,6 +23,8 @@ class Session {
   Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db)
     : socket_(std::move(socket)), db_(db) {};
 
+  void start();
+  void stop();
 };
 
 #endif // SIMPLESERVER_HEADER_SESSION_H_
