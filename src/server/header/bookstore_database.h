@@ -17,6 +17,7 @@ class BookstoreDatabase {
   
  public:
   BookstoreDatabase(const std::string& connection_data);
+  ~BookstoreDatabase();
 
   std::vector<std::string> get_summaries(int num_books, int start_index);
   std::string get_book_details(const std::string& isbn);

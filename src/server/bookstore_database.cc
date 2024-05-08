@@ -23,6 +23,12 @@ pqxx::work BookstoreDatabase::begin_transaction() {
   return pqxx::work(*connection_);
 }
 
+BookstoreDatabase::~BookstoreDatabase() {
+  if (connection_ && connection_->is_open()) {
+    connection_->disconnect();
+  }
+}
+
 std::vector<std::string> BookstoreDatabase::get_summaries(int num_books,
                                                           int start_index) {
   try {
