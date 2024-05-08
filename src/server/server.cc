@@ -13,17 +13,30 @@ Server::Server(unsigned short port, BookstoreDatabase& db)
   : acceptor_(io_context_), db_(db) {
     
   set_up_acceptor(port);
+}
+  void Server::run() {
+  unsigned int num_threads = std::max(2u, std::thread::hardware_concurrency());
+  worker_threads_.reserve(num_threads);
+  for (unsigned int i = 0; i < num_threads; ++i) {
+    worker_threads_.emplace_back(&Server::worker_thread, this);
+  }
+
   begin_accept_connections();
+
+  for (auto& thread : worker_threads_) {
+    thread.join();
+  }
 }
 
 void Server::begin_accept_connections() {
-  while (true) {
+  while (!stop_) {
     try {
       boost::asio::ip::tcp::socket socket(io_context_);
       acceptor_.accept(socket);
       std::cout << "Connection established" << std::endl;
 
-      std::make_shared<Session>(std::move(socket), db_)->start();
+      auto session = std::make_shared<Session>(std::move(socket), db_, request_queue_);
+      session->start();
 
     } catch (const boost::system::system_error& e) {
       if (e.code() == boost::asio::error::bad_descriptor) {

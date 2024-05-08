@@ -25,6 +25,7 @@ class Server {
 
  public:
   Server(unsigned short port, BookstoreDatabase& db);
+  void run();
 };
 
 #endif // SIMPLESERVER_HEADER_SERVER_H_
