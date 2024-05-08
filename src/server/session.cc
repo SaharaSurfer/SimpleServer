@@ -174,3 +174,37 @@ void Session::process_request() {
 
   boost::asio::write(socket_, boost::asio::buffer(response + "\r\n\r\n"));
 }
+
+std::vector<std::string> Session::break_by_spaces(const std::string& data) {
+  std::vector<std::string> words;
+  std::size_t start = 0;
+  std::size_t end = data.find(' ');
+
+  while (end != std::string::npos) {
+    words.push_back(data.substr(start, end - start));
+    start = end + 1;
+    end = data.find(' ', start);
+  }
+
+  // Push the last word onto the vector
+  std::string last_word = data.substr(start);
+
+  // Delete /r symbol
+  last_word.pop_back();
+
+  words.push_back(last_word);
+  return words;
+}
+
+std::string Session::join_strings(const std::vector<std::string>& data) {
+  std::string result;
+
+  for (const std::string& w : data) {
+    if (!result.empty()) {
+      result += " ";
+    }
+    result += w;
+  }
+
+  return result;
+}

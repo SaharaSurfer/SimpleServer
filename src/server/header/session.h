@@ -15,9 +15,8 @@ class Session {
   int user_id_ = -1;
   int current_page_ = 0;
 
-  void send_welcome_message();
-  void read_request();
-  void process_request();
+  std::vector<std::string> break_by_spaces(const std::string& data);
+  std::string join_strings(const std::vector<std::string>& data);
 
  public:
   Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db)
