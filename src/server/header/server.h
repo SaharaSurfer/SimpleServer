@@ -1,28 +1,22 @@
 #ifndef SIMPLESERVER_HEADER_SERVER_H_
 #define SIMPLESERVER_HEADER_SERVER_H_
 
+#include <utility>
 #include <boost/asio.hpp>
-#include <boost/thread.hpp>
 
-#include "bookstore_database.h"
 #include "session.h"
-
-using namespace boost::asio;
+#include "bookstore_database.h"
 
 class Server {
  private:
-  io_context io_context_;
-  ip::tcp::acceptor acceptor_;
-  BookstoreDatabase database_;
+  boost::asio::io_context io_context_;
+  boost::asio::ip::tcp::acceptor acceptor_;
+  BookstoreDatabase& db_;
 
-  void accept_connection();
+  void set_up_acceptor(unsigned short port);
 
  public:
-  Server(int port, int num_threads, std::string db_connection_data)
-      : acceptor_(io_context_, ip::tcp::endpoint(ip::tcp::v4(), port)),
-        database_(db_connection_data) {
-    accept_connection();
-  }
+  Server(unsigned short port, BookstoreDatabase& db);
 };
 
 #endif // SIMPLESERVER_HEADER_SERVER_H_
