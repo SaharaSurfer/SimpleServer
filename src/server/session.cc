@@ -7,12 +7,20 @@
 
 #include "header/bookstore_database.h"
 
-void Session::receive_request() {
+void Session::send_welcome_message() {
   try {
-    boost::asio::read_until(socket_, data_, "\0");
-    handle_request();
+    std::vector<std::string> welcome_summaries = db_.get_summaries(5, 1);
+
+    std::string welcome_string;
+    std::string divider(80, '-');
+    for (const std::string& row : welcome_summaries) {
+      welcome_string += row + divider + '\n';
+    }
+
+    boost::asio::write(socket_, boost::asio::buffer(welcome_string + "\r\n\r\n"));
+
   } catch (const std::exception& e) {
-    // Handle errors here...
+    std::cerr << "Error in Session::send_welcome_message(): " << e.what() << std::endl;
   }
 }
 

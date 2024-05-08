@@ -12,6 +12,7 @@ class Session {
   boost::asio::streambuf input_buffer_;
   BookstoreDatabase& db_;
 
+  void send_welcome_message();
   void read_request();
 
  public:
