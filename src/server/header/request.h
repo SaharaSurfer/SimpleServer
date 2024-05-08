@@ -1,17 +1,19 @@
 #ifndef SIMPLESERVER_HEADER_REQUEST_H_
 #define SIMPLESERVER_HEADER_REQUEST_H_
 
+#include <vector>
 #include <string>
 #include <memory>
 
-#include "header/session.h"
+class Session;
 
 struct Request {
   std::shared_ptr<Session> session;
-  std::string data;
+  std::string type;
+  std::vector<std::string> params;
 
-  Request(std::shared_ptr<Session> s, std::string d)
-        : session(std::move(s)), data(std::move(d)) {}
+  Request(std::shared_ptr<Session> s, const std::string& t, const std::vector<std::string>& p)
+        : session(std::move(s)), type(std::move(t)), params(std::move(p)) {}
 };
 
 #endif // SIMPLESERVER_HEADER_REQUEST_H_
