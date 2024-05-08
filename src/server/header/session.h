@@ -22,6 +22,10 @@ class Session {
   Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db)
     : socket_(std::move(socket)), db_(db) {};
 
+  void send_welcome_message();
+  std::vector<std::string> read_request();
+  void process_request(const std::string& type, const std::vector<std::string>& params);
+
   void start();
   void stop();
 };

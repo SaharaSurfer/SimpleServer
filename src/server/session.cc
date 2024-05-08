@@ -39,34 +39,38 @@ void Session::send_welcome_message() {
   }
 }
 
-void Session::read_request() {
+std::vector<std::string> Session::read_request() {
   try {
     boost::system::error_code ec;
+    boost::asio::streambuf buf;
 
-    // Clear input buffer
-    input_buffer_.consume(input_buffer_.size());
-
-    read_until(socket_, input_buffer_, "\r\n", ec);
+    read_until(socket_, buf, "\r\n", ec);
 
     if (ec) {
       throw boost::system::system_error(ec);
     }
 
+    std::istream is(&buf);
+    std::string request;
+    std::getline(is, request);
+
+    std::vector<std::string> params = break_by_spaces(request);
+    
+    return params;
+
   } catch (const std::exception& e) {
     std::cerr << "Error in Session::read_request(): " << e.what() << std::endl;
+    return {};
   }
 }
 
-void Session::process_request() {
-  std::istream is(&input_buffer_);
-  std::string request;
-  is >> request;
-
+void Session::process_request(const std::string& type,
+                              const std::vector<std::string>& params) {
   std::string response = "";
 
-  if (request == "<STOP>") {
+  if (type == "<STOP>") {
     stop();
-  } else if (request == "<FORWARD>") {
+  } else if (type == "<FORWARD>") {
     current_page_++;
     std::vector<std::string> summaries = db_.get_summaries(5, current_page_ * 5 + 1);
 
@@ -79,18 +83,9 @@ void Session::process_request() {
       }
     }
 
-  } else if (request == "<DETAILS>") {
-    std::string isbn;
-
-    if (std::getline(is, isbn)) {
-      for (std::string::iterator it = isbn.begin(); it != isbn.end(); ) {
-        // Remove spaces and newline characters
-        if (*it == ' ' || *it == '\n' || *it == '\r') {
-            it = isbn.erase(it);
-        } else {
-            ++it;
-        }
-      }
+  } else if (type == "<DETAILS>") {
+    if (params.size() == 1) {
+      std::string isbn = params[1];
 
       response = db_.get_book_details(isbn);
 
@@ -101,31 +96,24 @@ void Session::process_request() {
       response = "Invalid DETAILS request.";
     }
 
-  } else if (request == "<ADD_TO_CART>") {
-    int quantity;
-    std::string isbn;
-    is >> quantity >> isbn;
-
-    for (std::string::iterator it = isbn.begin(); it != isbn.end(); ) {
-      // Remove spaces and newline characters
-      if (*it == ' ' || *it == '\n' || *it == '\r') {
-        it = isbn.erase(it);
-      } else {
-        ++it;
-      }
-    }
-    
-    if (user_id_ == -1) {
-      response = "First you have to log in or register!";
+  } else if (type == "<ADD_TO_CART>") {
+    if (params.size() != 2) {
+      response = "Invalid ADD_TO_CART request";
     } else {
-      if (db_.add_book_to_cart(user_id_, quantity, isbn)) {
-        response = "Book added to cart.";
+      int quantity = std::stoi(params[1]);
+      std::string isbn = params[2];
+
+      if (user_id_ == -1) {
+      response = "First you have to log in or register!";
       } else {
-        response = "Failed to add book to cart.";
+        if (db_.add_book_to_cart(user_id_, quantity, isbn)) {
+          response = "Book added to cart.";
+        } else {
+          response = "Failed to add book to cart.";
+        }
       }
     }
-
-  } else if (request == "<CREATE_ORDER>") {
+  } else if (type == "<CREATE_ORDER>") {
     if (user_id_ == -1) {
       response = "First you have to log in or register!";
     } else {
@@ -137,10 +125,10 @@ void Session::process_request() {
       }
     }
 
-  } else if (request == "<REGISTER>") {
-    std::string registration_data;
+  } else if (type == "<REGISTER>") {
+    if (params.size() == 5) {
+      std::string registration_data = join_strings(params);
 
-    if (std::getline(is, registration_data)) {
       user_id_ = db_.register_user(registration_data);
       if (user_id_ != -1) {
         response = "User registered with ID: " + std::to_string(user_id_);
@@ -150,13 +138,13 @@ void Session::process_request() {
     } else {
       response = "Invalid REGISTER request.";
     }
-  } else if (request == "<LOGIN>") {
+  } else if (type == "<LOGIN>") {
     if (user_id_ != -1) {
-      request = "You're already in the system.";
+      response = "You're already in the system.";
     } else {
-      std::string login_data;
+      if (params.size() == 2) {
+        std::string login_data = join_strings(params);
 
-      if (std::getline(is, login_data)) {
         user_id_ = db_.log_in_user(login_data);
         if (user_id_ != -1) {
           response = "Login successful.";
@@ -169,7 +157,7 @@ void Session::process_request() {
     }
 
   } else {
-    response = "Invalid request: " + request;
+    response = "Invalid request: " + params[0];
   }
 
   boost::asio::write(socket_, boost::asio::buffer(response + "\r\n\r\n"));
