@@ -13,6 +13,7 @@ class Server {
   boost::asio::ip::tcp::acceptor acceptor_;
   BookstoreDatabase& db_;
 
+  void begin_accept_connections();
   void set_up_acceptor(unsigned short port);
 
  public:

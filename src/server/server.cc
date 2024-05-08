@@ -13,12 +13,28 @@ Server::Server(unsigned short port, BookstoreDatabase& db)
   : acceptor_(io_context_), db_(db) {
     
   set_up_acceptor(port);
+  begin_accept_connections();
 }
 
-void Server::accept_connection() {
+void Server::begin_accept_connections() {
   while (true) {
-    ip::tcp::socket socket = acceptor_.accept(io_context_);
-    std::make_shared<Session>(std::move(socket), database_)->start();
+    try {
+      boost::asio::ip::tcp::socket socket(io_context_);
+      acceptor_.accept(socket);
+      std::cout << "Connection established" << std::endl;
+
+      std::make_shared<Session>(std::move(socket), db_)->start();
+
+    } catch (const boost::system::system_error& e) {
+      if (e.code() == boost::asio::error::bad_descriptor) {
+        // This error occurs when the socket is closed
+        std::cerr << "Socket closed. Continuing to accept connections." << std::endl;
+        continue;
+      } else {
+        // Other errors
+        std::cerr << "Error accepting connection: " << e.what() << std::endl;
+      }
+    }
   }
 }
 
