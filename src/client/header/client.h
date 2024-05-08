@@ -11,6 +11,8 @@ class Client {
   boost::asio::ip::tcp::socket socket_;
   boost::asio::streambuf input_buffer_;
 
+  void send_request(const std::string& request);
+
  public:
   Client() : socket_(io_context_) {}
 
