@@ -9,6 +9,7 @@ int main() {
     BookstoreDatabase db(connection_data);
 
     Server server(8080, db);
+    server.run();
 
   } catch (const std::exception& e) {
     std::cerr << "Error: " << e.what() << std::endl;
