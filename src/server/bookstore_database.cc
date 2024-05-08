@@ -4,6 +4,24 @@
 #include <sstream>
 #include <format>
 #include <vector>
+#include <memory>
+#include <mutex>
+
+#include <pqxx/pqxx>
+
+BookstoreDatabase::BookstoreDatabase(const std::string& connection_data) {
+  connection_ = std::make_unique<pqxx::connection>(connection_data);
+}
+
+pqxx::work BookstoreDatabase::begin_transaction() {
+  std::lock_guard<std::mutex> lock(connection_mutex_);
+  
+  if (!connection_ || !connection_->is_open()) {
+    throw std::runtime_error("Connection is not open.");
+  }
+
+  return pqxx::work(*connection_);
+}
 
 std::vector<std::string> BookstoreDatabase::get_summaries(int num_books,
                                                           int start_index) {

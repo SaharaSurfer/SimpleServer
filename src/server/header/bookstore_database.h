@@ -3,22 +3,20 @@
 
 #include <string>
 #include <vector>
+#include <memory>
+#include <mutex>
 
 #include <pqxx/pqxx>
 
 class BookstoreDatabase {
  private:
-  pqxx::connection connection_;
-  pqxx::work transaction_;
-  std::string last_error;
+  std::unique_ptr<pqxx::connection> connection_ = nullptr;
+  mutable std::mutex connection_mutex_;
+
+  pqxx::work begin_transaction();
   
  public:
-  BookstoreDatabase(const std::string& connection_data)
-      : connection_(connection_data), transaction_(connection_) {
-    if (!connection_.is_open()) {
-      throw std::runtime_error("Failed to connect to the database.");
-    }
-  };
+  BookstoreDatabase(const std::string& connection_data);
 
   std::vector<std::string> get_summaries(int num_books, int start_index);
   std::string get_book_details(const std::string& isbn);
