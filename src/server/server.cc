@@ -11,10 +11,18 @@
 
 Server::Server(unsigned short port, BookstoreDatabase& db)
   : acceptor_(io_context_), db_(db) {
-    
+  
   set_up_acceptor(port);
 }
-  void Server::run() {
+
+Server::~Server() {
+  stop_ = true;
+  request_queue_.stop();
+  acceptor_.close();
+  io_context_.stop();
+}
+
+void Server::run() {
   unsigned int num_threads = std::max(2u, std::thread::hardware_concurrency());
   worker_threads_.reserve(num_threads);
   for (unsigned int i = 0; i < num_threads; ++i) {

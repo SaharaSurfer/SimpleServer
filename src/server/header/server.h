@@ -25,6 +25,7 @@ class Server {
 
  public:
   Server(unsigned short port, BookstoreDatabase& db);
+  ~Server();
   void run();
 };
 
