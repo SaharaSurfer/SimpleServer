@@ -16,6 +16,7 @@ class RequestQueue {
 
  public:
   void push(Request request);
+  bool pop(Request& request);
 };
 
 #endif // SIMPLESERVER_HEADER_REQUESTQUEUE_H_
