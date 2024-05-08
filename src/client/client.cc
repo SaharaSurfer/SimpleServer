@@ -45,3 +45,20 @@ void Client::connect_to_server(const std::string& host, const std::string& port)
   boost::asio::ip::tcp::resolver::results_type endpoints = resolver.resolve(host, port);
   connect(socket_, endpoints);
 }
+
+void Client::run() {
+  // Read welcome message from server
+  read_reply();
+
+  // Main loop
+  while (socket_.is_open()) {
+    std::cout << "Enter your request: ";
+
+    // Read customer input
+    std::string request;
+    std::getline(std::cin, request);
+
+    send_request(request);
+    read_reply();
+  }
+}

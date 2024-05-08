@@ -18,6 +18,7 @@ class Client {
   Client() : socket_(io_context_) {}
 
   void connect_to_server(const std::string& host, const std::string& port);
+  void run();
 };
 
 #endif // SIMPLESERVER_HEADER_CLIENT_H_
