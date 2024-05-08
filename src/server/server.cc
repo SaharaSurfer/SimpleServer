@@ -48,3 +48,14 @@ void Server::set_up_acceptor(unsigned short port) {
   acceptor_.bind(endpoint);
   acceptor_.listen();
 }
+
+void Server::worker_thread() {
+  while (true) {
+    Request request(nullptr, "", {});
+    if (!request_queue_.pop(request)) {
+      break;
+    }
+
+    request.session->process_request(request.type, request.params);
+  }
+}
