@@ -1,16 +1,18 @@
 #ifndef SIMPLESERVER_HEADER_SESSION_H_
 #define SIMPLESERVER_HEADER_SESSION_H_
 
+#include <memory>
 #include <utility>
 #include <boost/asio.hpp>
 
+#include "request_queue.h"
 #include "bookstore_database.h"
 
-class Session {
+class Session : public std::enable_shared_from_this<Session> {
  private:
   boost::asio::ip::tcp::socket socket_;
-  boost::asio::streambuf input_buffer_;
   BookstoreDatabase& db_;
+  RequestQueue& request_queue_;
   
   int user_id_ = -1;
   int current_page_ = 0;
@@ -19,8 +21,8 @@ class Session {
   std::string join_strings(const std::vector<std::string>& data);
 
  public:
-  Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db)
-    : socket_(std::move(socket)), db_(db) {};
+  Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db, RequestQueue& queue)
+    : socket_(std::move(socket)), db_(db), request_queue_(queue) {};
 
   void send_welcome_message();
   std::vector<std::string> read_request();

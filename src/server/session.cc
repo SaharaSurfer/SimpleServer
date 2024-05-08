@@ -8,11 +8,21 @@
 #include "header/bookstore_database.h"
 
 void Session::start() {
-  send_welcome_message();
+  try {
+    send_welcome_message();
 
-  while (socket_.is_open()) {
-    read_request();
-    process_request();
+    while (socket_.is_open()) {
+      std::vector<std::string> params = read_request();
+      
+      if (!params.empty()) {
+        std::string type = params.front();
+        params.erase(params.begin());
+
+        request_queue_.push(Request(shared_from_this(), type, params));
+      }
+    }
+  } catch (const std::exception& e) {
+    std::cerr << "Session ended with error: " << e.what() << std::endl;
   }
 }
 
