@@ -25,42 +25,45 @@ pqxx::work BookstoreDatabase::begin_transaction() {
 
 std::vector<std::string> BookstoreDatabase::get_summaries(int num_books,
                                                           int start_index) {
-  std::string query = "SELECT title, author_name, price "
-                      "FROM book_view LIMIT $1 OFFSET $2";
-
   try {
-    pqxx::result res = transaction_.exec_params(query, num_books, start_index);
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT title, author_name, price, isbn "
+                        "FROM book_view LIMIT $1 OFFSET $2";
+    pqxx::result res = transaction.exec_params(query, num_books, start_index);
 
     if (res.empty()) {
+      transaction.commit();
       return {};
     }
 
     std::vector<std::string> summaries;
     summaries.reserve(num_books);
     for (const auto& row : res) {
-      std::string summary = std::format("TITLE: {}\nAUTHOR: {}\nPRICE: {} rubles\n",
-                                      row["title"].as<std::string>(),
-                                      row["author_name"].as<std::string>(),
-                                      row["price"].as<int>());
+      std::string summary = std::format("TITLE: {}\nAUTHOR: {}\nPRICE: {} rubles\nISBN: {}\n",
+                                        row["title"].as<std::string>(),
+                                        row["author_name"].as<std::string>(),
+                                        row["price"].as<int>(),
+                                        row["isbn"].as<std::string>());
       summaries.emplace_back(summary);
     }
-
+    
+    transaction.commit();
     return summaries;
 
   } catch (const std::exception& e) {
-    last_error = e.what();
     return {};
   }
 }
 
 std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
-  std::string query = "SELECT * FROM book_view "
-                      "WHERE isbn = $1";
-  
   try {
-    pqxx::result res = transaction_.exec_params(query, isbn);
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT * FROM book_view "
+                        "WHERE isbn = $1";
+    pqxx::result res = transaction.exec_params(query, isbn);
 
     if (res.empty()) {
+      transaction.commit();
       return "";
     }
 
@@ -81,119 +84,92 @@ std::string BookstoreDatabase::get_book_details(const std::string& isbn) {
         res[0]["publication_date"].as<std::string>(),
         res[0]["price"].as<std::string>());
 
+    transaction.commit();
     return book_details;
   
   } catch (const std::exception& e) {
-    last_error = e.what();
     return "";
   }
 }
 
 bool BookstoreDatabase::add_book_to_cart(int user_id, int quantity,
                                          const std::string& isbn) {
-  std::string query = "INSERT INTO cart_book (customer_id, isbn, quantity) "
-                      "VALUES ($1, $2, $3)";
-  
   try {
-    pqxx::result res = transaction_.exec_params(query, user_id, isbn, quantity);
-    transaction_.commit();
+    pqxx::work transaction = begin_transaction();
+    std::string query = "INSERT INTO cart_book (customer_id, isbn, quantity) "
+                        "VALUES ($1, $2, $3)";
+    pqxx::result res = transaction.exec_params(query, user_id, isbn, quantity);
+    transaction.commit();
 
     return true;
     
   } catch (const std::exception& e) {
-    last_error = e.what();
     return false;
   }
 }
 
 bool BookstoreDatabase::change_cart_book_quantity(int user_id, int new_quantity,
-                                                  const std::string& isbn) {
-  std::string query = "SELECT is_success FROM update_cart_book_quantity($1, $2, $3)";
-  
+                                                  const std::string& isbn) {  
   try {
-    pqxx::result res = transaction_.exec_params(query, new_quantity, user_id, isbn);
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT update_cart_book_quantity($1, $2, $3)";
+    pqxx::result res = transaction.exec_params(query, new_quantity, user_id, isbn);
 
-    if (res.empty() || !res[0]["is_success"].as<bool>()) {
-      return false;
-    }
-
-    transaction_.commit();
-    return true;
+    transaction.commit();
+    return !res.empty() && res[0][0].as<bool>();
 
   } catch (const std::exception& e) {
-    last_error = e.what();
     return false;
   }
 }
 
 int BookstoreDatabase::create_order(int user_id) {
-  std::string query = "SELECT new_order_id FROM create_order($1)";
-
   try {
-    pqxx::result res = transaction_.exec_params(query, user_id);
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT create_order($1)";
+    pqxx::result res = transaction.exec_params(query, user_id);
 
-    if (res.empty()) {
-      return -1;
-    }
-
-    transaction_.commit();
-    return res[0]["new_order_id"].as<int>();
+    transaction.commit();
+    return res.empty() ? -1 : res[0][0].as<int>();
 
   } catch (const std::exception& e) {
-    last_error = e.what();
     return -1;
   }
 }
 
 int BookstoreDatabase::register_user(const std::string& registration_data) {
-  std::string query = "SELECT user_id FROM register_user($1, $2, $3, $4, $5)";
-
-  std::string username;
-  std::string password;
-  std::string email;
-  std::string address;
-  std::string phone;
-
   try {
     std::istringstream iss(registration_data);
+    std::string username, password, email, address, phone;
     iss >> username >> password >> email >> address >> phone;
 
-    pqxx::result res = transaction_.exec_params(query, username, password,
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT register_user($1, $2, $3, $4, $5)";
+    pqxx::result res = transaction.exec_params(query, username, password,
                                                 email, address, phone);
 
-    if (res.size() != 1) {
-      return -1;
-    }
-
-    transaction_.commit();
-    return res[0]["user_id"].as<int>();
+    transaction.commit();
+    return res.size() != 1 ? -1 : res[0][0].as<int>();
 
   } catch (const std::exception& e) {
-    last_error = e.what();
     return -1;
   }
 }
 
-bool BookstoreDatabase::log_in_user(const std::string& log_in_data) {
-  std::string query = "SELECT is_success FROM login_user($1, $2)";
-
-  std::string username;
-  std::string password;
-
+int BookstoreDatabase::log_in_user(const std::string& log_in_data) {
   try {
     std::istringstream iss(log_in_data);
+    std::string username, password;
     iss >> username >> password;
 
-    pqxx::result res = transaction_.exec_params(query, username, password);
+    pqxx::work transaction = begin_transaction();
+    std::string query = "SELECT login_user($1, $2)";
+    pqxx::result res = transaction.exec_params(query, username, password);
 
-    if (res.size() != 1) {
-      return false;
-    }
-
-    return res[0]["is_success"].as<bool>();
-
+    transaction.commit();
+    return res.size() != 1 ? -1 : res[0][0].as<int>();
+  
   } catch (const std::exception& e) {
-    last_error = e.what();
-    return false;
+    return -1;
   }
 }
