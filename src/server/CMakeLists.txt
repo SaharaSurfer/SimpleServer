@@ -12,6 +12,12 @@ set(SOURCES
   server.cc
   session.cc
   request_queue.cc
+  forward_handler.cc
+  details_handler.cc
+  add_to_cart_handler.cc
+  create_order_handler.cc
+  login_handler.cc
+  register_handler.cc
 )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/header)
 

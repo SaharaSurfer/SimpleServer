@@ -1,14 +1,19 @@
 #include "header/session.h"
 
 #include <iostream>
+#include <vector>
 #include <string>
+#include <memory>
+#include <unordered_map>
 #include <utility>
 #include <boost/asio.hpp>
 
+#include "handlers_includer.h"
 #include "header/bookstore_database.h"
 
 void Session::start() {
   try {
+    bind_handlers();
     send_welcome_message();
 
     while (socket_.is_open()) {
@@ -34,13 +39,7 @@ void Session::stop() {
 
 void Session::send_welcome_message() {
   try {
-    std::vector<std::string> welcome_summaries = db_.get_summaries(5, 1);
-
-    std::string welcome_string;
-    std::string divider(80, '-');
-    for (const std::string& row : welcome_summaries) {
-      welcome_string += row + divider + '\n';
-    }
+    std::string welcome_string = handlers_["<FORWARD>"]->handle({});
 
     boost::asio::write(socket_, boost::asio::buffer(welcome_string + "\r\n\r\n"));
 
@@ -80,97 +79,25 @@ void Session::process_request(const std::string& type,
 
   if (type == "<STOP>") {
     stop();
-  } else if (type == "<FORWARD>") {
-    current_page_++;
-    std::vector<std::string> summaries = db_.get_summaries(5, current_page_ * 5 + 1);
-
-    if (summaries.empty()) {
-      response = "Error finding books.";
-    } else {
-      std::string divider(80, '-');
-      for (const std::string& summary : summaries) {
-        response += summary + divider + '\n';
-      }
-    }
-
-  } else if (type == "<DETAILS>") {
-    if (params.size() == 1) {
-      std::string isbn = params[1];
-
-      response = db_.get_book_details(isbn);
-
-      if (response.empty()) {
-        response = "Unable to find book with ISBN " + isbn + ".";
-      }
-    } else {
-      response = "Invalid DETAILS request.";
-    }
-
-  } else if (type == "<ADD_TO_CART>") {
-    if (params.size() != 2) {
-      response = "Invalid ADD_TO_CART request";
-    } else {
-      int quantity = std::stoi(params[1]);
-      std::string isbn = params[2];
-
-      if (user_id_ == -1) {
-      response = "First you have to log in or register!";
-      } else {
-        if (db_.add_book_to_cart(user_id_, quantity, isbn)) {
-          response = "Book added to cart.";
-        } else {
-          response = "Failed to add book to cart.";
-        }
-      }
-    }
-  } else if (type == "<CREATE_ORDER>") {
-    if (user_id_ == -1) {
-      response = "First you have to log in or register!";
-    } else {
-      int order_id = db_.create_order(user_id_);
-      if (order_id != -1) {
-        response = "Order created with ID: " + std::to_string(order_id);
-      } else {
-        response = "Failed to create order.";
-      }
-    }
-
-  } else if (type == "<REGISTER>") {
-    if (params.size() == 5) {
-      std::string registration_data = join_strings(params);
-
-      user_id_ = db_.register_user(registration_data);
-      if (user_id_ != -1) {
-        response = "User registered with ID: " + std::to_string(user_id_);
-      } else {
-        response = "Failed to register user.";
-      }
-    } else {
-      response = "Invalid REGISTER request.";
-    }
-  } else if (type == "<LOGIN>") {
-    if (user_id_ != -1) {
-      response = "You're already in the system.";
-    } else {
-      if (params.size() == 2) {
-        std::string login_data = join_strings(params);
-
-        user_id_ = db_.log_in_user(login_data);
-        if (user_id_ != -1) {
-          response = "Login successful.";
-        } else {
-          response = "Login failed. Incorrect username or password.";
-        }
-      } else {
-        response = "Invalid LOGIN request.";
-      }
-    }
-
   } else {
-    response = "Invalid request: " + params[0];
+    auto it = handlers_.find(type);
+    if (it != handlers_.end()) {
+      response = it->second->handle(params);
+    } else {
+      response = "Invalid request: " + type;
+    }
   }
 
   boost::asio::write(socket_, boost::asio::buffer(response + "\r\n\r\n"));
+}
+
+void Session::bind_handlers() {
+  handlers_["<FORWARD>"] = std::make_unique<ForwardHandler>(db_);
+  handlers_["<DETAILS>"] = std::make_unique<DetailsHandler>(db_);
+  handlers_["<ADD_TO_CART>"] = std::make_unique<AddToCartHandler>(db_, user_id_);
+  handlers_["<CREATE_ORDER>"] = std::make_unique<CreateOrderHandler>(db_, user_id_);
+  handlers_["<REGISTER>"] = std::make_unique<RegisterHandler>(db_, user_id_);
+  handlers_["<LOGIN>"] = std::make_unique<LoginHandler>(db_, user_id_);
 }
 
 std::vector<std::string> Session::break_by_spaces(const std::string& data) {
@@ -192,17 +119,4 @@ std::vector<std::string> Session::break_by_spaces(const std::string& data) {
 
   words.push_back(last_word);
   return words;
-}
-
-std::string Session::join_strings(const std::vector<std::string>& data) {
-  std::string result;
-
-  for (const std::string& w : data) {
-    if (!result.empty()) {
-      result += " ";
-    }
-    result += w;
-  }
-
-  return result;
 }
