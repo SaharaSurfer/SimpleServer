@@ -23,6 +23,12 @@ void Session::start() {
         std::string type = params.front();
         params.erase(params.begin());
 
+        if (type == "<STOP>") {
+          std::cerr << "The client requested the connection to be stopped." << std::endl;
+          stop();
+          break; // Exit the loop when <STOP> command is received
+        }
+
         request_queue_.push(Request(shared_from_this(), type, params));
       }
     }
@@ -67,9 +73,15 @@ std::vector<std::string> Session::read_request() {
     
     return params;
 
-  } catch (const std::exception& e) {
-    std::cerr << "Error in Session::read_request(): " << e.what() << std::endl;
-    return {};
+  } catch (const boost::system::system_error& e) {
+    if (e.code() == boost::asio::error::eof) {
+      std::cerr << "The client terminated the connection." << std::endl;
+      stop();
+      return {};
+    } else {
+      std::cerr << "Error in Session::read_request(): " << e.what() << std::endl;
+      return {};
+    }
   }
 }
 
@@ -77,15 +89,11 @@ void Session::process_request(const std::string& type,
                               const std::vector<std::string>& params) {
   std::string response = "";
 
-  if (type == "<STOP>") {
-    stop();
+  auto it = handlers_.find(type);
+  if (it != handlers_.end()) {
+    response = it->second->handle(params);
   } else {
-    auto it = handlers_.find(type);
-    if (it != handlers_.end()) {
-      response = it->second->handle(params);
-    } else {
-      response = "Invalid request: " + type;
-    }
+    response = "Invalid request: " + type;
   }
 
   boost::asio::write(socket_, boost::asio::buffer(response + "\r\n\r\n"));
