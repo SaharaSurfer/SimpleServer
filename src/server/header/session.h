@@ -9,7 +9,6 @@
 #include <utility>
 #include <boost/asio.hpp>
 
-#include "request_queue.h"
 #include "handlers_includer.h"
 #include "bookstore_database.h"
 #include "request_handler_interaface.h"

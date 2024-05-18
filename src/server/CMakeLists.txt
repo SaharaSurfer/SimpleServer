@@ -11,7 +11,6 @@ set(SOURCES
   bookstore_database.cc
   server.cc
   session.cc
-  request_queue.cc
   forward_handler.cc
   details_handler.cc
   add_to_cart_handler.cc
