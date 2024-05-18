@@ -11,27 +11,16 @@
 #include "handlers_includer.h"
 #include "header/bookstore_database.h"
 
+boost::asio::ip::tcp::socket& Session::socket() {
+  return socket_;
+}
+
 void Session::start() {
   try {
     bind_handlers();
     send_welcome_message();
 
-    while (socket_.is_open()) {
-      std::vector<std::string> params = read_request();
-      
-      if (!params.empty()) {
-        std::string type = params.front();
-        params.erase(params.begin());
-
-        if (type == "<STOP>") {
-          std::cerr << "The client requested the connection to be stopped." << std::endl;
-          stop();
-          break; // Exit the loop when <STOP> command is received
-        }
-
-        request_queue_.push(Request(shared_from_this(), type, params));
-      }
-    }
+    do_read();
   } catch (const std::exception& e) {
     std::cerr << "Session ended with error: " << e.what() << std::endl;
   }
@@ -46,7 +35,6 @@ void Session::stop() {
 void Session::send_welcome_message() {
   try {
     std::string welcome_string = handlers_["<FORWARD>"]->handle({});
-
     boost::asio::write(socket_, boost::asio::buffer(welcome_string + "\r\n\r\n"));
 
   } catch (const std::exception& e) {
@@ -54,35 +42,36 @@ void Session::send_welcome_message() {
   }
 }
 
-std::vector<std::string> Session::read_request() {
-  try {
-    boost::system::error_code ec;
-    boost::asio::streambuf buf;
+void Session::do_read() {
+  auto self(shared_from_this());
+  boost::asio::async_read_until(socket_, buffer_, "\r\n",
+      [this, self](const boost::system::error_code& ec, std::size_t) {
+        if (!ec) {
+          std::istream is(&buffer_);
+          std::string request;
+          std::getline(is, request);
 
-    read_until(socket_, buf, "\r\n", ec);
+          std::vector<std::string> params = self->break_by_spaces(request);
+          std::string type = params.front();
+          params.erase(params.begin());
+          
+          if (type == "<STOP>") {
+            stop();
+            std::cerr << "User disconected" << std::endl;
+            return;
+          }
 
-    if (ec) {
-      throw boost::system::system_error(ec);
-    }
-
-    std::istream is(&buf);
-    std::string request;
-    std::getline(is, request);
-
-    std::vector<std::string> params = break_by_spaces(request);
-    
-    return params;
-
-  } catch (const boost::system::system_error& e) {
-    if (e.code() == boost::asio::error::eof) {
-      std::cerr << "The client terminated the connection." << std::endl;
-      stop();
-      return {};
-    } else {
-      std::cerr << "Error in Session::read_request(): " << e.what() << std::endl;
-      return {};
-    }
-  }
+          process_request(type, params);
+          do_read();
+        } else {
+          if (ec == boost::asio::error::eof) {
+            std::cerr << "The client terminated the connection." << std::endl;
+          } else {
+            std::cerr << "Error in Session::read_request(): " << ec.message() << std::endl;
+          }
+          stop();
+        }
+  });
 }
 
 void Session::process_request(const std::string& type,
@@ -96,7 +85,12 @@ void Session::process_request(const std::string& type,
     response = "Invalid request: " + type;
   }
 
-  boost::asio::write(socket_, boost::asio::buffer(response + "\r\n\r\n"));
+  boost::asio::async_write(socket_, boost::asio::buffer(response + "\r\n\r\n"),
+      [this](const boost::system::error_code& ec, std::size_t) {
+        if (ec) {
+          std::cerr << "Error in Session::process_request(): " << ec.message() << std::endl;
+        }
+      });
 }
 
 void Session::bind_handlers() {

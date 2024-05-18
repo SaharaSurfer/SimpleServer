@@ -1,6 +1,7 @@
 #ifndef SIMPLESERVER_HEADER_SESSION_H_
 #define SIMPLESERVER_HEADER_SESSION_H_
 
+#include <iostream>
 #include <vector>
 #include <string>
 #include <memory>
@@ -18,8 +19,8 @@ typedef std::unique_ptr<RequestHandlerInterface> request_ptr;
 class Session : public std::enable_shared_from_this<Session> {
  private:
   boost::asio::ip::tcp::socket socket_;
+  boost::asio::streambuf buffer_;
   BookstoreDatabase& db_;
-  RequestQueue& request_queue_;
   std::unordered_map<std::string, request_ptr> handlers_;
   
   int user_id_ = -1;
@@ -28,11 +29,15 @@ class Session : public std::enable_shared_from_this<Session> {
   std::vector<std::string> break_by_spaces(const std::string& data);
 
  public:
-  Session(boost::asio::ip::tcp::socket socket, BookstoreDatabase& db, RequestQueue& queue)
-    : socket_(std::move(socket)), db_(db), request_queue_(queue) {};
+  Session(boost::asio::io_context& io_context, BookstoreDatabase& db)
+    : socket_(io_context), db_(db) {};
+
+  ~Session() { std::cerr << "Session closed" << std::endl; }
+
+  boost::asio::ip::tcp::socket& socket();
 
   void send_welcome_message();
-  std::vector<std::string> read_request();
+  void do_read();
   void process_request(const std::string& type, const std::vector<std::string>& params);
 
   void start();
